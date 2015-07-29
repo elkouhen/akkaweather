@@ -1,18 +1,32 @@
 import akka.actor.{ActorSystem, ActorLogging, Actor, Props}
-
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
+
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
+import scala.collection.immutable._
+
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
+import dispatch._
+
+
 class LocationService extends Actor with ActorLogging {
+
+  val headers = Map("X-Mashape-Key" -> "oz5OTrdrQnmshayy6rDZZ0D7YCBCp16qCMhjsn8QxeG5h7mHCB", "Accept" -> "application/json")
+
+  val req = :/("devru-latitude-longitude-find-v1.p.mashape.com" , 443).secure / "/latlon.php?location=Nantes" <:<(headers)
+  
   def receive = {
-    case _ => sender ! "{ \"lat\" : \"1\" : \"lon\" : \"1\" }"
+    case _ =>
+      for (str <- Http(req OK as.String)) yield {
+        println(str)
+        sender ! str
+      }
   }
 }
 
