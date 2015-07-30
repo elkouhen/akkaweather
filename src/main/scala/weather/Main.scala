@@ -14,19 +14,24 @@ import org.json4s.jackson.JsonMethods._
 
 import dispatch._
 
+import java.net.ConnectException
+import com.ning.http.client.Response
+
 
 class LocationService extends Actor with ActorLogging {
 
-  val headers = Map("X-Mashape-Key" -> "oz5OTrdrQnmshayy6rDZZ0D7YCBCp16qCMhjsn8QxeG5h7mHCB", "Accept" -> "application/json")
+  val headers = Map("X-Mashape-Key" -> "oz5OTrdrQnmshayy6rDZZ0D7YCBCp16qCMhjsn8QxeG5h7mHCB",
+    "Accept" -> "application/json")
 
-  val req = :/("devru-latitude-longitude-find-v1.p.mashape.com" , 443).secure / "/latlon.php?location=Nantes" <:<(headers)
+  val req = :/("devru-latitude-longitude-find-v1.p.mashape.com", 443).secure / "latlon.php" <<? Map("location" -> "Nantes") <:< headers
   
   def receive = {
     case _ =>
-      for (str <- Http(req OK as.String)) yield {
-        println(str)
-        sender ! str
-      }
+      
+      val responseFuture = for (res <- Http(req OK as.String)) yield res
+
+      //println (responseFuture.get)
+      sender ! responseFuture
   }
 }
 
@@ -40,6 +45,10 @@ object MainAkka extends App {
   val system = ActorSystem("akkaweather")
 
   implicit val timeout = Timeout(5 seconds)
+
+  
+  val req = host("devru-latitude-longitude-find-v1.p.mashape.com", 443).secure / "latlon.php?location=Nantes" 
+  
 
   val locationService = system.actorOf(Props(new LocationService), "locationService")
   val weatherService = system.actorOf(Props(new WeatherService), "weatherService")
